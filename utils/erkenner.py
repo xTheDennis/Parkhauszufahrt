@@ -22,15 +22,24 @@ def detect_license_plate(frame, reader):
             cropped = cv2.convertScaleAbs(cropped, alpha=1.6, beta=30)
             cropped = cv2.resize(cropped, None, fx=2.0, fy=2.0)
 
-            # OCR auf das verbesserte Bild
-            ocr_results = reader.readtext(cropped)
+            # Graustufen
+            gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+
+            # Invertieren
+            inverted = cv2.bitwise_not(gray)
+
+            # --------- NEU: Schwellenwert setzen, um nur "sehr helle" Stellen zu behalten ---------
+            _, binary = cv2.threshold(inverted, 200, 255, cv2.THRESH_BINARY)
+            # Jetzt sind nur noch die weißen Buchstaben übrig
+
+            # OCR auf das bereinigte Bild
+            ocr_results = reader.readtext(binary)
 
             if ocr_results:
-                # Mehrere Blöcke nach X-Position sortieren und zusammenfügen
+                # Blöcke nach X-Position sortieren und zusammenfügen
                 ocr_results = sorted(ocr_results, key=lambda r: r[0][0][0])
                 full_text = "".join([r[1] for r in ocr_results if r[2] > 0.3])
 
-                # Gib Text & Cropped-Bild zurück
-                return frame, cropped, full_text
+                return frame, binary, full_text
 
     return frame, None, None
