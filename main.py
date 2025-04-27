@@ -9,6 +9,7 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont
 import numpy as np
 from threading import Thread
 from queue import Queue
+import paho.mqtt.client as mqtt  # ➔ MQTT Import!
 
 from utils.erkenner import detect_license_plate
 from utils.helper import format_plate, validate_plate
@@ -21,6 +22,9 @@ class Config:
     CAMERA_INDEX = 0
     REPEAT_DELAY = 120
     OCR_CONFIDENCE = 0.5
+    MQTT_BROKER = "localhost"
+    MQTT_PORT = 1883
+    MQTT_TOPIC_ACCESS = "parkhaus/tor/öffnen"
 
 # === Hauptanwendung ===
 class LicensePlateApp:
@@ -29,6 +33,7 @@ class LicensePlateApp:
         self.setup_gui()
         self.setup_ocr()
         self.setup_data()
+        self.setup_mqtt()   # ➔ MQTT-Setup hinzufügen
         self.setup_video()
 
     def setup_gui(self):
@@ -115,6 +120,15 @@ class LicensePlateApp:
         self.detected_texts = []
         self.cooldown_frames = 0
 
+    def setup_mqtt(self):
+        self.mqtt_client = mqtt.Client()
+        try:
+            self.mqtt_client.connect(Config.MQTT_BROKER, Config.MQTT_PORT)
+            self.mqtt_client.loop_start()
+            print("MQTT-Verbindung hergestellt!")
+        except Exception as e:
+            print(f"MQTT-Verbindung fehlgeschlagen: {e}")
+
     def setup_video(self):
         self.cap = cv2.VideoCapture(Config.CAMERA_INDEX)
         if not self.cap.isOpened():
@@ -171,6 +185,14 @@ class LicensePlateApp:
             self.access_var.set("✅ ACCESS GRANTED")
             self.access_label.config(bg="green", fg="black")
             self.log_access(plate, "GRANTED", filename)
+
+            # ➔ HIER: MQTT Nachricht bei Access Granted
+            try:
+                self.mqtt_client.publish(Config.MQTT_TOPIC_ACCESS, '{"command": "open"}')
+                print("MQTT: Access Granted Nachricht gesendet!")
+            except Exception as e:
+                print(f"MQTT-Fehler beim Senden: {e}")
+
         else:
             self.access_denied += 1
             self.access_var.set("❌ ACCESS DENIED")
