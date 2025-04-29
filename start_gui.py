@@ -1,9 +1,11 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog
+from tkinter import messagebox
 import os
-import subprocess
 import pandas as pd
 from PIL import Image, ImageTk
+
+# Importiere direkt die LicensePlateApp
+from main import LicensePlateApp
 
 class StartApp:
     def __init__(self, root):
@@ -30,9 +32,14 @@ class StartApp:
 
     def start_main(self):
         try:
-            subprocess.Popen(["python", "main.py"])
+            # Statt subprocess: Neues Tkinter-Fenster für Parkhaus öffnen
+            self.root.destroy()
+            parkhaus_root = tk.Tk()
+            app = LicensePlateApp(parkhaus_root)
+            parkhaus_root.protocol("WM_DELETE_WINDOW", app.on_closing)
+            parkhaus_root.mainloop()
         except Exception as e:
-            messagebox.showerror("Fehler", f"main.py konnte nicht gestartet werden: {e}")
+            messagebox.showerror("Fehler", f"Parkhaus konnte nicht gestartet werden: {e}")
 
     def show_screenshots(self):
         screenshot_dir = "daten/screenshots"
